@@ -1,8 +1,7 @@
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
-from sqlalchemy.dialects.sqlite import DATETIME
 import datetime
 
 Base = declarative_base()
@@ -14,7 +13,7 @@ class User(Base):
     email = Column(String(250), nullable=False)
     picture = Column(String(500))
     allow_public_access = Column(Integer, nullable=False)  # Feature not implemented yet
-    signup_date = Column(DATETIME, default=datetime.datetime.utcnow)
+    signup_date = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class Region(Base):
@@ -25,8 +24,8 @@ class Region(Base):
     picture = Column(String(500))
     geo_location = Column(String(500))
     rating = Column(Integer, nullable=False)
-    creation_date = Column(DATETIME, default=datetime.datetime.utcnow)
-    modifiy_date = Column(DATETIME, default=datetime.datetime.utcnow)
+    creation_date = Column(DateTime, default=datetime.datetime.utcnow)
+    modifiy_date = Column(DateTime, default=datetime.datetime.utcnow)
     user_id = Column(Integer, ForeignKey('user.id'))
     user = relationship(User)
 
@@ -62,8 +61,8 @@ class Place(Base):
     geo_location = Column(String(500))
     info_website = Column(String(500))
     rating = Column(Integer, nullable=False)
-    creation_date = Column(DATETIME, default=datetime.datetime.utcnow)
-    modifiy_date = Column(DATETIME, default=datetime.datetime.utcnow)
+    creation_date = Column(DateTime, default=datetime.datetime.utcnow)
+    modifiy_date = Column(DateTime, default=datetime.datetime.utcnow)
     region_id = Column(Integer,ForeignKey('region.id'))
     region = relationship(Region)
     user_id = Column(Integer, ForeignKey('user.id'))
