@@ -2,7 +2,7 @@
 import sys
 import logging
 logging.basicConfig(stream=sys.stderr)
-sys.path.insert(0,"/srv/TravelLog/")
+sys.path.insert(0,"/srv/TravelLog/TravelLog/")
 
-from FlaskApp import app as application
+from project import app as application
 application.secret_key = 'super_secret_key'

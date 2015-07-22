@@ -135,7 +135,7 @@
 		sudo mkdir /srv/TravelLog
 
 		# Clone the git repository with the application files
-		sudo git clone https://github.com/Adekay/P3-Travel-Log /srv/TravelLog/TravelLog
+		sudo git clone https://github.com/Adekay/P5-TravelLogWebServer /srv/TravelLog
 
 		# Create a config file for the virtual host
 		sudo pico /etc/apache2/sites-available/TravelLog.conf
@@ -199,12 +199,23 @@
 		# Log into the user postgres
 		sudo -i -u postgres
 
-		# Start psql
-		psql
-
 		# Create catalog user and catalog db with owner catalog. Remove all other user's acces to the catalog db
-		CREATE USER catalog WITH CREATEDB LOGIN PASSWORD 'cementvanitycoasterquirk';
+		psql --command "CREATE USER catalog WITH CREATEDB LOGIN PASSWORD 'cementvanitycoasterquirk'";
+		createdb -O catalog catalog
+		psql -U postgres -d catalog -c "REVOKE ALL ON SCHEMA public FROM public;"
+		psql -U postgres -d catalog -c "GRANT ALL ON SCHEMA public TO catalog;"
+
+		# By default postgres only allows local connections
+
+		# log out back to grader account
+		logout
+
+		# Initialize the database
+		sudo python /srv/TravelLog/TravelLog/database_setup.py
+		sudo python /srv/TravelLog/TravelLog/load_sample_data.py
+
 
 		**External Resources :
 			https://github.com/robertavram/Linux-Server-Configuration
 			https://www.digitalocean.com/community/tutorials/how-to-install-and-use-postgresql-on-ubuntu-14-04
+			http://www.cyberciti.biz/tips/postgres-allow-remote-access-tcp-connection.html
