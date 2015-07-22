@@ -1,0 +1,210 @@
+########################################################
+#      Basic Linux Server Setup - Steps performed
+########################################################
+
+1) Connecting to the server
+	1.1) Connected to Udacity account using instructions at : https://www.udacity.com/account#!/development_environment
+	1.2) Connected to server using PuTTY (root@52.26.199.55)
+	
+
+	**External Resources :
+		http://www.ualberta.ca/CNS/RESEARCH/LinuxClusters/pka-putty.html
+
+
+2) Updating packages. Setting up auto-updates
+	# Update package list
+	apt-get update
+
+	# Upgrade packages
+	apt-get -y upgrade
+
+	# Install tool to auto-update packages
+	apt-get install -y unattended-upgrades
+
+	# Enable auto-update
+	dpkg-reconfigure -plow unattended-upgrades
+
+	# Set up server timezone
+	dpkg-reconfigure tzdata
+	
+
+	**External Resources :
+		http://askubuntu.com/questions/9/how-do-i-enable-automatic-updates
+		https://github.com/robertavram/Linux-Server-Configuration
+
+
+3) Setting up grader user and restricting login acces
+	3.1) Add user grader
+		3.1.1) Create user
+			# Create user grader
+			adduser --gecos "" grader
+			
+			# Password : kickbottlesneakfruit
+
+			# Grant sudo priviliges to grader
+			usermod -a -G sudo grader
+			
+		3.1.2) Configure sudo priviliges
+			# Make a backup of sudoers file
+			cp /etc/sudoers /etc/sudoers.bak
+			
+			- Edit /etc/sudoers:
+				- Replace "root ALL=(ALL:ALL) ALL" with "grader ALL=(ALL:ALL) ALL"
+				- Replace "sudo ALL=(ALL:ALL) ALL" with "sudo ALL=(ALL:ALL) NOPASSWD: ALL"
+				
+			# Make /etc/sudoers readonly
+			chmod 0444 /etc/sudoers
+		
+		3.1.3) Configure hostname
+			- Edit /etc/hostname :
+			Add : "127.0.0.1 localhost.localdomain localhost"
+			
+			- To apply changes without rebooting, run the command : "sudo hostname localhost"
+
+
+		**External Resources :
+			http://askubuntu.com/questions/168280/how-do-i-grant-sudo-privileges-to-an-existing-user
+			https://github.com/robertavram/Linux-Server-Configuration
+			http://askubuntu.com/questions/59458/error-message-when-i-run-sudo-unable-to-resolve-host-none
+
+			
+	3.2) Configuring ssh 
+		3.2.1) Backup ssh configuration
+			# Make a backup of default ssh configuration
+			cp /etc/ssh/sshd_config /etc/ssh/sshd_config.factory-defaults
+			
+			# Make backup copy readonly
+			chmod a-w /etc/ssh/sshd_config.factory-defaults
+
+		3.2.2) Configure ssh 
+			- Edit file /etc/ssh/sshd_config
+			- Change port to 2200
+			- Temporairly set password authentification to yes "PasswordAuthentication yes"
+			- Add or edit the "AllowUsers" parameter to only show "AllowUsers grader"
+			- Restart ssh : "service ssh restart"
+			
+		3.2.3) Configure rsa key file for authenticating user grader
+			On a client machine with access to ssh, the one used to connect to the server :
+			
+			# Generate key files for user grader
+			ssh-keygen -t rsa -f local-path-to-file
+			
+			# Send the key file to the server
+			ssh-copy-id -p 2200 -i local-path-to-file grader@52.26.199.55
+			
+		3.2.4) Finalize ssh configuration
+			- Login with user grader : "ssh -p 2200 grader@52.26.199.55"
+			- Change permissions for ssh config : "sudo chmod 777 /etc/ssh/sshd_config"
+			- Edit /etc/ssh/sshd_config 
+			- Remove password authentification "PasswordAuthentication no"
+			- Reset permissions for ssh config : "sudo chmod 644 /etc/ssh/sshd_config"
+			- Restart ssh : "sudo service ssh restart"
+			
+
+		**External Resources :
+			https://help.ubuntu.com/community/SSH/OpenSSH/Configuring
+			https://github.com/robertavram/Linux-Server-Configuration
+			http://www.thinkplexx.com/learn/article/unix/command/chmod-permissions-flags-explained-600-0600-700-777-100-etc
+
+
+4) Set up Firewall and other services
+	4.1) Set up UFW firewall
+		# Configure the UFW firewall to only allow : NTP on 123/udp, SSH on 2200/tcp and HTTP on 80/tcp
+		sudo ufw allow 123/udp
+		sudo ufw allow 2200/tcp
+		sudo ufw allow 80/tcp
+		sudo ufw enable	
+
+	4.2) Set up NTP server
+		sudo apt-get install -y ntp
+		
+
+	**External Resources :
+		https://www.digitalocean.com/community/tutorials/how-to-setup-a-firewall-with-ufw-on-an-ubuntu-and-debian-cloud-server
+		https://help.ubuntu.com/lts/serverguide/NTP.html
+
+
+5) Install Web and Python environment
+	5.1) Install packages
+		sudo apt-get install -y zlib1g-dev libbz2-dev libreadline-dev python-pip build-essential python-dev python2.7-dev
+		sudo apt-get install python-flask python-sqlalchemy python-psycopg2 libjpeg8-dev apache2 python-setuptools libapache2-mod-wsgi
+		sudo pip install pillow oauth2client glances
+
+	5.1) Set up website files and configuration
+		# Make a main folder for the website
+		sudo mkdir /srv/TravelLog
+
+		# Clone the git repository with the application files
+		sudo git clone https://github.com/Adekay/P3-Travel-Log /srv/TravelLog/TravelLog
+
+		# Create a config file for the virtual host
+		sudo pico /etc/apache2/sites-available/TravelLog.conf
+
+		# Put the following in the file
+			<VirtualHost *:80>
+            	DocumentRoot /srv
+                ServerName travellog.com
+                ServerAdmin admin@travellog.com
+                WSGIScriptAlias / /srv/TravelLog/flaskapp.wsgi
+                <Directory /srv/TravelLog/TravelLog/>
+                        Order allow,deny
+                        Allow from all
+                </Directory>
+                Alias /static /srv/TravelLog/TravelLog/static
+                <Directory /srv/TravelLog/TravelLog/static/>
+                        Order allow,deny
+                        Allow from all
+                </Directory>
+                ErrorLog ${APACHE_LOG_DIR}/error.log
+                LogLevel warn
+                CustomLog ${APACHE_LOG_DIR}/access.log combined
+			</VirtualHost>
+
+		# Enable the virtual host
+		sudo a2ensite TravelLog
+
+		# Create the flaskapp.wsgi file
+		sudo nano /srv/TravelLog/flaskapp.wsgi
+
+		# Put the following in the file
+			#!/usr/bin/python
+			import sys
+			import logging
+			logging.basicConfig(stream=sys.stderr)
+			sys.path.insert(0,"/srv/TravelLog/")
+
+			from FlaskApp import app as application
+			application.secret_key = 'super_secret_key'
+
+		# Deactivate the default site
+		sudo a2dissite 000-default
+
+		# Restart Apache
+		sudo service apache2 restart
+
+
+		**External Resources :
+			http://heliumhq.com/docs/installing_python_2.7.5_on_ubuntu
+			https://pypi.python.org/pypi/Glances/
+			https://help.ubuntu.com/lts/serverguide/httpd.html
+			https://github.com/robertavram/Linux-Server-Configuration
+			https://www.digitalocean.com/community/tutorials/how-to-deploy-a-flask-application-on-an-ubuntu-vps
+			http://stackoverflow.com/questions/23496751/change-document-root-folder-of-apache-web-server-on-linux
+
+
+	5.2) Install and configure Postgresql
+		# Install packages
+		sudo apt-get install postgresql postgresql-contrib
+
+		# Log into the user postgres
+		sudo -i -u postgres
+
+		# Start psql
+		psql
+
+		# Create catalog user and catalog db with owner catalog. Remove all other user's acces to the catalog db
+		CREATE USER catalog WITH CREATEDB LOGIN PASSWORD 'cementvanitycoasterquirk';
+
+		**External Resources :
+			https://github.com/robertavram/Linux-Server-Configuration
+			https://www.digitalocean.com/community/tutorials/how-to-install-and-use-postgresql-on-ubuntu-14-04

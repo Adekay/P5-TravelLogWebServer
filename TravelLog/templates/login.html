@@ -1,0 +1,217 @@
+{% extends "main.html" %}
+{% block login %}
+
+  <!-- Modal -->
+  <div class="modal fade" id="modal-login" role="dialog">
+    <div class="modal-dialog modal-login-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title panel-heading">Sign in to Travel Log</h4>
+        </div>
+        <div class="modal-body">
+          <div id="modal-contents">
+            <h5>Sign in to Travel Log using your existing login with one of the following services</h5>
+
+            <div class="row text-center">
+              <div class="col-md-12">
+                <br>
+                <a href="#" onclick="fb_login();"><img src="{{ url_for('static', filename='images/facebook_signin.png') }}" alt="Sign In with Facebook"></a>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col-md-12">
+                <br>
+                <div id="custom_google_btn">
+                  <a href="#"><img src="{{ url_for('static', filename='images/google_signin.png') }}" alt="Sign In with Google"></a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="modal-loading" class="modal-loading" hidden>
+            <div class="row text-center">
+              <div class="col-md-12">
+                <br>
+                <br>
+                <img src="{{ url_for('static', filename='images/loading.gif') }}" alt="Loading...">
+                Loading...
+                <br>
+                <br>
+              </div>
+            </div>
+          </div>
+
+          <div id="modal-error" class="modal-error" hidden>
+            <div class="alert alert-error" id="result"></div>
+          </div>          
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+
+{% endblock %}
+
+{% block content %}
+
+<!-- Trigger the modal with a button -->
+<br>
+<br>
+
+<div class="text-center">
+  <div class="panel">
+    <div class="panel-body">
+    <h3>You must sign in to modify content.</h3>
+    <br><br>
+    <button type="button" class="btn btn-info btn-lg" data-toggle="modal" data-target="#modal-login">Login</button>
+      
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}
+
+
+{% block login_scripts %}
+
+    <script src="https://apis.google.com/js/client:platform.js?onload=start" async defer></script>
+
+    <script>
+      function start() {
+        gapi.load('auth2', function() {
+          auth2 = gapi.auth2.init({
+            client_id: '307130684860-62ovf7l03hddj1eum1ep39gfpvhcps7c.apps.googleusercontent.com',
+            // Scopes to request in addition to 'profile' and 'email'
+            //scope: 'additional_scope'
+          });
+        });
+      }
+    </script>
+
+<!-- Reset layout on modal open -->
+<script>
+
+$('#modal-login').on('shown.bs.modal', function () {
+    $('#modal-error').hide();
+    $('#modal-loading').hide();
+    $('#modal-contents').show();
+});
+  
+</script>
+
+<!--FACEBOOK SIGN IN -->
+<script>
+
+
+(function(d, s, id){
+   var js, fjs = d.getElementsByTagName(s)[0];
+   if (d.getElementById(id)) {return;}
+   js = d.createElement(s); js.id = id;
+   js.src = "//connect.facebook.net/en_US/sdk.js";
+   fjs.parentNode.insertBefore(js, fjs);
+ }(document, 'script', 'facebook-jssdk'));
+
+
+window.fbAsyncInit = function() {
+  FB.init({
+    appId      : '118462538486305',
+    cookie     : true,  // enable cookies to allow the server to access 
+    xfbml      : true,
+    version    : 'v2.3'
+  });
+};
+
+function fb_login(){
+    $('#modal-contents').hide();
+    $('#modal-error').hide();
+    $('#modal-loading').show();
+
+    FB.login(function(response) {
+
+        if (response.authResponse) {
+            access_token = response.authResponse.accessToken; //get access token
+            user_id = response.authResponse.userID; //get FB UID
+
+            FB.api('/me', function(response) {
+              $.ajax({
+                type: 'POST',
+                url: '/fbconnect?state={{STATE}}',
+                processData: false,
+                data: access_token,
+                contentType: 'application/octet-stream; charset=utf-8',
+                success: function(result) {
+                  // Handle or verify the server response if necessary.
+                  if (result) {
+                    $('#result').html('Redirecting...');
+                    $('#modal-login').modal('hide');
+                    window.location.href = "/";
+                  } else {
+                    $('#modal-loading').hide();
+                    $('#modal-error').show();
+                    $('#result').html('Failed to make a server-side call. Check your configuration and console.');
+                  }
+                }
+              });
+            });
+        } else {
+          $('#modal-login').modal('hide');
+        }
+    }, {
+        scope: 'public_profile,email'
+    });
+}
+
+</script>      
+
+<!-- Google signin -->
+
+<script>
+  $('#custom_google_btn').click(function() {
+    $('#modal-contents').hide();
+    $('#modal-error').hide();
+    $('#modal-loading').show();
+
+    // signInCallback defined in step 6.
+    auth2.grantOfflineAccess({'redirect_uri': 'postmessage'}).then(signInCallback);
+  });
+
+  function signInCallback(authResult) {
+
+    if (authResult['code']) {
+      // Send the one-time-use code to the server, if the server responds, write a 'login successful' message to the web page and then redirect back to the main restaurants page
+      $.ajax({
+        type: 'POST',
+        url: '/gconnect?state={{STATE}}',
+        processData: false,
+        data: authResult['code'],
+        contentType: 'application/octet-stream; charset=utf-8',
+        success: function(result) {
+          // Handle or verify the server response if necessary.
+          if (result) {
+              $('#result').html('Redirecting...')
+              $('#modal-login').modal('hide');
+              window.location.href = "/";
+          } else if (authResult['error']) {
+             $('#modal-loading').hide();
+             $('#modal-error').show();
+             $('#result').html('There was an error: ' + authResult['error']);
+          } else {
+             $('#modal-loading').hide();
+             $('#modal-error').show();
+             $('#result').html('Failed to make a server-side call. Check your configuration and console.');
+          }
+        }
+    });
+  } }
+
+</script>
+
+{% endblock %}
