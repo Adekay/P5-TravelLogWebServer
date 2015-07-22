@@ -219,3 +219,11 @@
 			https://github.com/robertavram/Linux-Server-Configuration
 			https://www.digitalocean.com/community/tutorials/how-to-install-and-use-postgresql-on-ubuntu-14-04
 			http://www.cyberciti.biz/tips/postgres-allow-remote-access-tcp-connection.html
+			https://help.ubuntu.com/community/PostgreSQL
+			http://askubuntu.com/questions/59458/error-message-when-i-run-sudo-unable-to-resolve-host-none
+
+	
+	5.3) The web application is now set up and running!
+
+
+
